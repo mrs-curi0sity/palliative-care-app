@@ -1,7 +1,7 @@
 // scripts/generateQuestions.js
-const { Configuration, OpenAIApi } = require("openai");
+const OpenAI = require("openai");
 const admin = require('firebase-admin');
-const serviceAccount = require('../path/to/your/serviceAccountKey.json');
+const serviceAccount = require('../config/serviceAccountKey.json');
 
 // Initialisieren Sie Firebase Admin
 admin.initializeApp({
@@ -10,11 +10,9 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-// Konfigurieren Sie die OpenAI API
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 const topics = [
   "Schmerzmanagement in der Palliativpflege",
@@ -27,37 +25,47 @@ const topics = [
 
 async function generateAndSaveQuestions() {
   for (const topic of topics) {
-    try {
-      const response = await openai.createCompletion({
-        model: "text-davinci-002",
-        prompt: `Generiere 5 Multiple-Choice-Fragen auf Deutsch zum Thema "${topic}" im Bereich Palliativpflege. Für jede Frage:
-        1. Formuliere die Frage
-        2. Gib eine korrekte Antwort an
-        3. Gib drei falsche Antworten an
-        4. Ordne die Frage einer spezifischen Kategorie zu (z.B. "Medizinisches Wissen", "Kommunikation", "Ethik", etc.)
-        5. Weise der Frage einen Schwierigkeitsgrad zu (1 für leicht, 2 für mittel, 3 für schwer)
-        
-        Formatiere die Ausgabe als JSON-Objekt mit den Feldern: question, correctAnswer, incorrectAnswers (Array), category, difficulty.`,
-        max_tokens: 2000,
-        temperature: 0.7,
-      });
-
-      const questions = JSON.parse(response.data.choices[0].text);
-
-      // Speichern Sie jede Frage in Firestore
-      for (const question of questions) {
-        await db.collection('questions').add({
-          ...question,
-          topic,
-          points: question.difficulty * 10, // Einfache Punkteberechnung basierend auf dem Schwierigkeitsgrad
-          createdAt: admin.firestore.FieldValue.serverTimestamp()
+    for (let i = 0; i < 2; i++) {  // Schleife für 5 Fragen pro Thema
+      try {
+        console.log(`Generiere Frage ${i+1} für Thema: ${topic}`);
+        const response = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [{
+            role: "user",
+            content: `Generiere 1 Multiple-Choice-Frage auf Deutsch zum Thema "${topic}" im Bereich Palliativpflege. Für die Frage:
+            1. Formuliere die Frage
+            2. Gib eine korrekte Antwort an
+            3. Gib drei falsche Antworten an
+            4. Ordne die Frage einer spezifischen Kategorie zu (z.B. "Medizinisches Wissen", "Kommunikation", "Ethik", etc.)
+            5. Weise der Frage einen Schwierigkeitsgrad zu (1 für leicht, 2 für mittel, 3 für schwer)
+            
+            Formatiere die Ausgabe als JSON-Objekt mit den Feldern: question, correctAnswer, incorrectAnswers (Array), category, difficulty.`
+          }],
+          temperature: 0.7,
         });
-      }
 
-      console.log(`Generiert und gespeichert: 5 Fragen zum Thema: ${topic}`);
-    } catch (error) {
-      console.error(`Fehler beim Generieren von Fragen zum Thema ${topic}:`, error);
+        console.log('OpenAI Antwort erhalten:', response.choices[0].message.content);
+
+        const question = JSON.parse(response.choices[0].message.content);
+        console.log('Geparste Frage:', question);
+
+        // Speichern der Frage in Firestore
+        try {
+          await db.collection('questions').add({
+            ...question,
+            topic,
+            points: question.difficulty * 10,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          console.log('Frage erfolgreich gespeichert');
+        } catch (error) {
+          console.error('Fehler beim Speichern der Frage:', error);
+        }
+      } catch (error) {
+        console.error(`Fehler beim Generieren der Frage ${i+1} zum Thema ${topic}:`, error);
+      }
     }
+    console.log(`Generiert und gespeichert: 2 Fragen zum Thema: ${topic}`);
   }
 }
 

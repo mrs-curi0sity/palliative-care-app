@@ -1,13 +1,15 @@
+// src/components/Learn.js
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, increment } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { db } from '../firebase';
-import './Learn.css';
 
 function Learn() {
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showResult, setShowResult] = useState(false);
+  const auth = getAuth();
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -27,12 +29,27 @@ function Learn() {
     fetchQuestions();
   }, []);
 
+  const updateProgress = async (isCorrect) => {
+    if (!auth.currentUser) return;
+
+    const userProgressRef = doc(db, 'userProgress', auth.currentUser.uid);
+    const categoryProgressRef = doc(userProgressRef, 'categories', currentQuestion.category);
+
+    await setDoc(userProgressRef, { userId: auth.currentUser.uid }, { merge: true });
+    
+    await setDoc(categoryProgressRef, {
+      totalQuestions: increment(1),
+      correctAnswers: increment(isCorrect ? 1 : 0)
+    }, { merge: true });
+  };
+
   const handleAnswerSelect = (answer) => {
     setSelectedAnswer(answer);
   };
 
   const handleSubmit = () => {
     setShowResult(true);
+    updateProgress(selectedAnswer === currentQuestion.correctAnswer);
   };
 
   const handleNextQuestion = () => {
@@ -42,7 +59,7 @@ function Learn() {
   };
 
   if (questions.length === 0) {
-    return <div className="learn-container">Laden der Fragen...</div>;
+    return <div>Laden der Fragen...</div>;
   }
 
   const currentQuestion = questions[currentQuestionIndex];

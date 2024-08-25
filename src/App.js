@@ -1,30 +1,61 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
-import Home from './components/Home';
-import Learn from './components/Learn';
-import Quiz from './components/Quiz';
-import './App.css';
+import './App.css'; // oder './index.css', je nachdem, wie Ihre Datei heißt
+import React, { useState, useEffect } from 'react';
+   import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+   import { onAuthStateChanged, signOut } from "firebase/auth";
+   import { auth } from './firebase';
+   import Learn from './components/Learn';
+   import Auth from './components/Auth';
+   import ProgressDisplay from './components/ProgressDisplay';
 
-function App() {
-  return (
-    <Router>
-      <div className="App">
-        <nav>
-          <ul>
-            <li><Link to="/">Home</Link></li>
-            <li><Link to="/learn">Lernen</Link></li>
-            <li><Link to="/quiz">Quiz</Link></li>
-          </ul>
-        </nav>
+   function App() {
+     const [user, setUser] = useState(null);
 
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/learn" element={<Learn />} />
-          <Route path="/quiz" element={<Quiz />} />
-        </Routes>
-      </div>
-    </Router>
-  );
-}
+     useEffect(() => {
+       const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+         setUser(currentUser);
+       });
+       return () => unsubscribe();
+     }, []);
 
-export default App;
+     const handleLogout = () => {
+       signOut(auth).then(() => {
+         setUser(null);
+       }).catch((error) => {
+         console.error("Logout error", error);
+       });
+     };
+
+     return (
+       <Router>
+         <div>
+           {!user ? (
+             <Auth onLogin={setUser} />
+           ) : (
+             <>
+               <nav>
+                 <ul>
+                   <li><Link to="/">Home</Link></li>
+                   <li><Link to="/learn">Lernen</Link></li>
+                   <li><Link to="/progress">Fortschritt</Link></li>
+                   <li><button onClick={handleLogout}>Abmelden</button></li>
+                 </ul>
+               </nav>
+               <Routes>
+                 <Route path="/learn" element={<Learn />} />
+                 <Route path="/progress" element={<ProgressDisplay />} />
+                 <Route path="/" element={
+                   <>
+                     <h1>Willkommen zur Palliative Care Learner App, {user.email}!</h1>
+                     <p>Wählen Sie "Lernen" um Fragen zu beantworten oder "Fortschritt" um Ihren Fortschritt zu sehen.</p>
+                   </>
+                 } />
+               </Routes>
+             </>
+           )}
+         </div>
+       </Router>
+     );
+   }
+
+   export default App;
+   

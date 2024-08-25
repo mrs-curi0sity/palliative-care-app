@@ -32,14 +32,20 @@ async function generateAndSaveQuestions() {
           model: "gpt-3.5-turbo",
           messages: [{
             role: "user",
-            content: `Generiere 1 Multiple-Choice-Frage auf Deutsch zum Thema "${topic}" im Bereich Palliativpflege. Für die Frage:
-            1. Formuliere die Frage
-            2. Gib eine korrekte Antwort an
-            3. Gib drei falsche Antworten an
-            4. Ordne die Frage einer spezifischen Kategorie zu (z.B. "Medizinisches Wissen", "Kommunikation", "Ethik", etc.)
-            5. Weise der Frage einen Schwierigkeitsgrad zu (1 für leicht, 2 für mittel, 3 für schwer)
+
+
+            content: `Generiere 1 anspruchsvolle Multiple-Choice-Frage auf Deutsch zum Thema "${topic}" im Bereich Palliativpflege. Berücksichtige folgende Punkte:
+
+            1. Die Frage sollte auf aktuellem medizinischem Fachwissen basieren und für Fachpersonal im Bereich Palliativpflege relevant sein.
+            2. Formuliere die Frage präzise und fachlich korrekt.
+            3. Gib eine korrekte Antwort an, die detailliert und wissenschaftlich fundiert ist.
+            4. Gib drei falsche Antworten an, die plausibel klingen, aber fachlich inkorrekt sind.
+            5. Ordne die Frage einer spezifischen Kategorie zu (z.B. "Schmerzmanagement", "Symptomkontrolle", "Ethische Entscheidungsfindung", "Kommunikation mit Patienten und Angehörigen", etc.)
+            6. Weise der Frage einen Schwierigkeitsgrad zu (1 für Grundkenntnisse, 2 für fortgeschrittenes Wissen, 3 für Expertenwissen)
             
-            Formatiere die Ausgabe als JSON-Objekt mit den Feldern: question, correctAnswer, incorrectAnswers (Array), category, difficulty.`
+            Beziehe dich auf aktuelle Leitlinien und Best Practices in der Palliativpflege. Die Frage sollte das kritische Denken und die Anwendung von Fachwissen fördern.
+            
+            Formatiere die Ausgabe als JSON-Objekt mit den Feldern: question, correctAnswer, incorrectAnswers (Array), category, difficulty, explanation (eine kurze Erklärung zur richtigen Antwort).`
           }],
           temperature: 0.7,
         });
